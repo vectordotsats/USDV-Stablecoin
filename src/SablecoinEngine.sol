@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 
 import {Stablecoin} from "./Stablecoin.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract StablecoinEngine is ReentrancyGuard {
     ///////////////////
@@ -13,6 +14,20 @@ contract StablecoinEngine is ReentrancyGuard {
         private s_tokenToPriceFeedAddress;
     Stablecoin private immutable i_stable;
     address[] private s_collateralTokens;
+    mapping(address user => mapping(address token => uint256 amount))
+        private s_userToTokenCollateralAmount;
+    mapping(address user => uint256 amount) private s_userToMintedStables;
+
+    ////////////////
+    /// EVENTS ////
+    //////////////
+    event DepositedCollateral(
+        address indexed user,
+        address indexed tokenCollateeralAddress,
+        uint256 indexed collateralAmount
+    );
+
+    event MintedStables(address indexed user, uint256 indexed mintedAmount);
 
     ////////////////
     /// ERRORS ////
@@ -20,6 +35,8 @@ contract StablecoinEngine is ReentrancyGuard {
     error Engine__TokenAndPriceFeedLengthMustBeEqual();
     error Engine__AmountCantBeLessThanZero();
     error Engine__TokenNotAllowed();
+    error Engine__CollateralDepositFailed();
+    error Engine__StablecoinMintFailed();
 
     ////////////////////
     //// Modifiers ////
@@ -38,9 +55,9 @@ contract StablecoinEngine is ReentrancyGuard {
         _;
     }
 
-    ///////////////////
-    /// FUNCTIONS ////
-    /////////////////
+    ///////////////////////////////
+    /// CONSTRUCTOR FUNCTIONS ////
+    /////////////////////////////
     constructor(
         address[] memory tokenAddresses,
         address[] memory priceFeedAddresses,
@@ -57,5 +74,46 @@ contract StablecoinEngine is ReentrancyGuard {
             s_collateralTokens.push(tokenAddresses[i]);
         }
         i_stable = Stablecoin(stablecoinAddress);
+    }
+
+    ///////////////////////////////
+    /// CORE FUNCTIONS ///////////
+    /////////////////////////////
+
+    function depositCollateral(
+        address tokenCollateralAddress,
+        uint256 collateralAmount
+    ) external isTokenAllowed(tokenCollateralAddress) nonReentrant {
+        s_userToTokenCollateralAmount[msg.sender][
+            tokenCollateralAddress
+        ] += collateralAmount;
+        emit DepositedCollateral(
+            msg.sender,
+            tokenCollateralAddress,
+            collateralAmount
+        );
+
+        // Transfer the collateral from the user to the contract
+        bool success = IERC20(tokenCollateralAddress).transferFrom(
+            msg.sender,
+            address(this),
+            collateralAmount
+        );
+        if (!success) {
+            revert Engine__CollateralDepositFailed();
+        }
+    }
+
+    function mintStables(
+        uint256 collateralAmount
+    ) external isBelowZero(collateralAmount) nonReentrant {
+        s_userToMintedStables[msg.sender] += collateralAmount;
+        emit MintedStables(msg.sender, collateralAmount);
+
+        // Transfer the stablecoin from the contract to the user
+        bool success = i_stable.mint(msg.sender, collateralAmount);
+        if (!success) {
+            revert Engine__StablecoinMintFailed();
+        }
     }
 }
