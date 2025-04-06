@@ -116,4 +116,35 @@ contract StablecoinEngine is ReentrancyGuard {
             revert Engine__StablecoinMintFailed();
         }
     }
+
+    ///////////////////////////////
+    /// CORE FUNCTIONS ///////////
+    /////////////////////////////
+    function getAccountInformation(
+        address user
+    )
+        private
+        view
+        returns (uint256 mintedStables, uint256 collateralDeposited)
+    {
+        mintedStables = s_userToMintedStables[user];
+        collateralDeposited = getCollateralInUSD(user);
+    }
+
+    function getCollateralInUSD(
+        address user
+    ) public view returns (uint256 totalCollateralInUsd) {
+        for (uint256 i = 0; i < s_collateralTokens.length; i++) {
+            address token = s_collateralTokens[i];
+            uint256 amount = s_userToTokenCollateralAmount[user][token];
+            totalCollateralInUsd += getTokenInUsd();
+        }
+
+        return totalCollateralInUsd;
+    }
+
+    function getTokenInUsd(
+        address _token,
+        uint256 _amount
+    ) public view returns (uint256) {}
 }
