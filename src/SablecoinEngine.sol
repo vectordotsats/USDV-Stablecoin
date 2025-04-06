@@ -5,6 +5,7 @@ pragma solidity ^0.8.20;
 import {Stablecoin} from "./Stablecoin.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 contract StablecoinEngine is ReentrancyGuard {
     ///////////////////
@@ -17,6 +18,15 @@ contract StablecoinEngine is ReentrancyGuard {
     mapping(address user => mapping(address token => uint256 amount))
         private s_userToTokenCollateralAmount;
     mapping(address user => uint256 amount) private s_userToMintedStables;
+
+    ///////////////////
+    /// CONSTANTS ////
+    /////////////////
+    uint256 private constant ADDITIONAL_FEES = 1e10;
+    uint256 private constant PRECISION = 1e18;
+    uint256 private constant LIQUIDATION_THRESHOLD = 50;
+    uint256 private constant LIQUIDATION_APPROXIMATOR = 100;
+    uint256 private constant MINIMUM_HEALTHFACTOR = 1;
 
     ////////////////
     /// EVENTS ////
@@ -118,7 +128,7 @@ contract StablecoinEngine is ReentrancyGuard {
     }
 
     ///////////////////////////////
-    /// CORE FUNCTIONS ///////////
+    /// SPECIAL FUNCTIONS ///////////
     /////////////////////////////
     function getAccountInformation(
         address user
@@ -137,7 +147,7 @@ contract StablecoinEngine is ReentrancyGuard {
         for (uint256 i = 0; i < s_collateralTokens.length; i++) {
             address token = s_collateralTokens[i];
             uint256 amount = s_userToTokenCollateralAmount[user][token];
-            totalCollateralInUsd += getTokenInUsd();
+            totalCollateralInUsd += getTokenInUsd(token, amount);
         }
 
         return totalCollateralInUsd;
@@ -146,5 +156,23 @@ contract StablecoinEngine is ReentrancyGuard {
     function getTokenInUsd(
         address _token,
         uint256 _amount
-    ) public view returns (uint256) {}
+    ) public view returns (uint256) {
+        AggregatorV3Interface priceFeed = AggregatorV3Interface(
+            s_tokenToPriceFeedAddress[_token]
+        );
+        (, int256 price, , , ) = priceFeed.latestRoundData();
+
+        ((uint256(price) * ADDITIONAL_FEES * _amount) / PRECISION);
+    }
+
+    function healthFactor(address user) private view returns (uint256) {
+        (
+            uint256 mintedStables,
+            uint256 collateralDeposited
+        ) = getAccountInformation(user);
+    }
+
+    // function revertIfHealthFactorIsTooLow() private view {
+
+    // }
 }
