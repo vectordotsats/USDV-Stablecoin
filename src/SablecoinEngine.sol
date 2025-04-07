@@ -47,6 +47,7 @@ contract StablecoinEngine is ReentrancyGuard {
     error Engine__TokenNotAllowed();
     error Engine__CollateralDepositFailed();
     error Engine__StablecoinMintFailed();
+    error Engine__HealthFactorIsTooLow(address user);
 
     ////////////////////
     //// Modifiers ////
@@ -156,23 +157,29 @@ contract StablecoinEngine is ReentrancyGuard {
     function getTokenInUsd(
         address _token,
         uint256 _amount
-    ) public view returns (uint256) {
+    ) public view returns (uint256 tokenInUsd) {
         AggregatorV3Interface priceFeed = AggregatorV3Interface(
             s_tokenToPriceFeedAddress[_token]
         );
         (, int256 price, , , ) = priceFeed.latestRoundData();
 
-        ((uint256(price) * ADDITIONAL_FEES * _amount) / PRECISION);
+        return ((uint256(price) * ADDITIONAL_FEES * _amount) / PRECISION);
     }
 
-    function healthFactor(address user) private view returns (uint256) {
+    function _healthFactor(address user) private view returns (uint256 hf) {
         (
             uint256 mintedStables,
             uint256 collateralDeposited
         ) = getAccountInformation(user);
+        uint256 collateralAdjustedForThreshold = (collateralDeposited *
+            LIQUIDATION_THRESHOLD) / LIQUIDATION_APPROXIMATOR;
+        return ((collateralAdjustedForThreshold * PRECISION) / mintedStables);
     }
 
-    // function revertIfHealthFactorIsTooLow() private view {
-
-    // }
+    function revertIfHealthFactorIsTooLow(address user) internal view {
+        uint256 healthFactor = _healthFactor(user);
+        if (healthFactor < MINIMUM_HEALTHFACTOR) {
+            revert Engine__HealthFactorIsTooLow(user);
+        }
+    }
 }
