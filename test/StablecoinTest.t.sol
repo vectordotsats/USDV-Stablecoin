@@ -59,5 +59,30 @@ contract StablecoinTest is Test {
         // Checking the balance of the engine contract
         uint256 engineBalance = IERC20(weth).balanceOf(address(engine));
         assertEq(engineBalance, depositAmount);
+        vm.stopPrank();
+    }
+
+    function testMintedTokens() public {
+        uint256 mintedAmount = 1e18; // 1 ETH
+        uint256 depositAmount = 1e18; // 1 ETH
+
+        deal(weth, USER, depositAmount);
+
+        // Minting weth to the dummy address.
+        vm.startPrank(USER);
+
+        //aproving the spending of weth in the engine contract.
+        IERC20(weth).approve(address(engine), depositAmount);
+
+        // Ensuring the collateral is deposited.
+        engine.depositCollateral(weth, depositAmount);
+
+        engine.mintStables(mintedAmount); //
+
+        uint256 userBalance = stablecoin.balanceOf(USER);
+        uint256 userEngineStableBalance = engine.getMintedStables(USER);
+
+        assertEq(userBalance, mintedAmount);
+        assertEq(userEngineStableBalance, mintedAmount);
     }
 }

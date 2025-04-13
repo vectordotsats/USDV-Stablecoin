@@ -193,4 +193,10 @@ contract StablecoinEngine is ReentrancyGuard {
 
         return collateralAmount;
     }
+
+    function getMintedStables(address user) external view returns (uint256) {
+        uint256 mintedStables = s_userToMintedStables[user];
+
+        return mintedStables;
+    }
 }
