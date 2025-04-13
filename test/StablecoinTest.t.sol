@@ -22,6 +22,7 @@ contract StablecoinTest is Test {
     /// CONSTANTS ///
     ////////////////
     error Engine__TokenNotAllowed();
+    error Engine__AmountCantBeLessThanZero();
 
     function setUp() public {
         deployStablecoin = new DeployStablecoin();
@@ -102,6 +103,19 @@ contract StablecoinTest is Test {
         IERC20(weth).approve(address(engine), depositAmount);
         vm.expectRevert(Engine__TokenNotAllowed.selector);
         engine.depositCollateral(address(0), depositAmount);
+        vm.stopPrank();
+    }
+
+    function testGreaterThanZeroModifier() public {
+        uint256 depositAmount = 0; // 0 ETH
+        deal(weth, USER, depositAmount);
+
+        // Gonna be sending 0 ETH and expecting it to revert.
+        vm.startPrank(USER);
+        IERC20(weth).approve(address(engine), depositAmount);
+
+        vm.expectRevert(Engine__AmountCantBeLessThanZero.selector);
+        engine.mintStables(depositAmount);
         vm.stopPrank();
     }
 }
