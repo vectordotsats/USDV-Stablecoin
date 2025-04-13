@@ -18,6 +18,11 @@ contract StablecoinTest is Test {
     address weth;
     address USER = makeAddr("user");
 
+    //////////////////
+    /// CONSTANTS ///
+    ////////////////
+    error Engine__TokenNotAllowed();
+
     function setUp() public {
         deployStablecoin = new DeployStablecoin();
         (stablecoin, engine, config) = deployStablecoin.run();
@@ -84,5 +89,19 @@ contract StablecoinTest is Test {
 
         assertEq(userBalance, mintedAmount);
         assertEq(userEngineStableBalance, mintedAmount);
+        vm.stopPrank();
+    }
+
+    function testIsTokenAllowedModifier() public {
+        uint256 depositAmount = 1e18; // 1 ETH
+
+        deal(weth, USER, depositAmount);
+
+        // Minting and invalid address and expecting it to revert.
+        vm.startPrank(USER);
+        IERC20(weth).approve(address(engine), depositAmount);
+        vm.expectRevert(Engine__TokenNotAllowed.selector);
+        engine.depositCollateral(address(0), depositAmount);
+        vm.stopPrank();
     }
 }

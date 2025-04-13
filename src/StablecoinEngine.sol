@@ -52,7 +52,7 @@ contract StablecoinEngine is ReentrancyGuard {
     ////////////////////
     //// Modifiers ////
     //////////////////
-    modifier isBelowZero(uint256 _amount) {
+    modifier isGreaterThanZero(uint256 _amount) {
         if (_amount <= 0) {
             revert Engine__AmountCantBeLessThanZero();
         }
@@ -117,7 +117,7 @@ contract StablecoinEngine is ReentrancyGuard {
 
     function mintStables(
         uint256 collateralAmount
-    ) external isBelowZero(collateralAmount) nonReentrant {
+    ) external isGreaterThanZero(collateralAmount) nonReentrant {
         s_userToMintedStables[msg.sender] += collateralAmount;
         emit MintedStables(msg.sender, collateralAmount);
 
@@ -182,6 +182,10 @@ contract StablecoinEngine is ReentrancyGuard {
             revert Engine__HealthFactorIsTooLow(user);
         }
     }
+
+    /////////////////////////////
+    /// TEST FUNCTIONS /////////
+    ///////////////////////////
 
     function getCollateralBalance(
         address user,
