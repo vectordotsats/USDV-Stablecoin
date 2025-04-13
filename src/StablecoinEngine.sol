@@ -182,4 +182,15 @@ contract StablecoinEngine is ReentrancyGuard {
             revert Engine__HealthFactorIsTooLow(user);
         }
     }
+
+    function getCollateralBalance(
+        address user,
+        address tokenAddress
+    ) external view returns (uint256) {
+        uint256 collateralAmount = s_userToTokenCollateralAmount[user][
+            tokenAddress
+        ];
+
+        return collateralAmount;
+    }
 }

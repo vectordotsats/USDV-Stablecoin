@@ -7,6 +7,7 @@ import {Stablecoin} from "../src/Stablecoin.sol";
 import {DeployStablecoin} from "../script/DeployStablecoin.s.sol";
 import {HelperConfig} from "../script/HelperConfig.s.sol";
 import {StablecoinEngine} from "../src/StablecoinEngine.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract StablecoinTest is Test {
     Stablecoin stablecoin;
@@ -15,6 +16,7 @@ contract StablecoinTest is Test {
     StablecoinEngine engine;
     address ethUsdPriceFeed;
     address weth;
+    address USER = makeAddr("user");
 
     function setUp() public {
         deployStablecoin = new DeployStablecoin();
@@ -28,12 +30,34 @@ contract StablecoinTest is Test {
     //// CORE TESTS ////
     ///////////////////
 
-    function testGetUsdValue() public {
+    function testGetUsdValue() public view {
         uint256 ethAmount = 5e18; // 5ETH
         // 5 * 2000 = 10000 USD
         uint256 expectedValue = 10000e18; // 10000 USD
 
         uint256 actualValue = engine.getTokenInUsd(weth, ethAmount);
         assertEq(expectedValue, actualValue);
+    }
+
+    function testCollateralDeposit() public {
+        uint256 depositAmount = 1e18; // 1 ETH
+
+        // Minting weth to the dummy address.
+        deal(weth, USER, depositAmount);
+
+        // Approving the StablecoinEngine to spend weth
+        vm.startPrank(USER);
+        IERC20(weth).approve(address(engine), depositAmount);
+
+        // Depositing Collateral
+        engine.depositCollateral(weth, depositAmount);
+
+        // Checking the balance of the user
+        uint256 userBalance = engine.getCollateralBalance(USER, weth);
+        assertEq(userBalance, depositAmount);
+
+        // Checking the balance of the engine contract
+        uint256 engineBalance = IERC20(weth).balanceOf(address(engine));
+        assertEq(engineBalance, depositAmount);
     }
 }
