@@ -132,4 +132,18 @@ contract StablecoinTest is Test {
         assertEq(userBalance, mintedAmount - burnAmount);
         vm.stopPrank();
     }
+
+    function testBurnFails() public {
+        uint256 burnAmount = 2e18;
+        uint256 mintedAmount = 1e18;
+
+        vm.startPrank(address(engine));
+        stablecoin.mint(address(engine), mintedAmount);
+
+        vm.expectRevert(
+            Stablecoin.Stablecoin_BalanceMustBeGreaterThanBurnAmount.selector
+        );
+        stablecoin.burn(burnAmount);
+        vm.stopPrank();
+    }
 }
