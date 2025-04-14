@@ -146,4 +146,13 @@ contract StablecoinTest is Test {
         stablecoin.burn(burnAmount);
         vm.stopPrank();
     }
+
+    function testOnlyOwnerWorks() public {
+        uint256 burnAmount = 1e18; // 1 ETH
+
+        vm.startPrank(USER);
+        vm.expectRevert();
+        stablecoin.burn(burnAmount);
+        vm.stopPrank();
+    }
 }
