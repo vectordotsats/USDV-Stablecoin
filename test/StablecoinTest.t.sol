@@ -118,4 +118,18 @@ contract StablecoinTest is Test {
         engine.mintStables(depositAmount);
         vm.stopPrank();
     }
+
+    function testBurnWorks() public {
+        uint256 burnAmount = 1e18; // 1 ETH
+        uint256 mintedAmount = 2e18; // 2 ETH
+
+        vm.startPrank(address(engine));
+        stablecoin.mint(address(engine), mintedAmount);
+
+        stablecoin.burn(burnAmount);
+
+        uint256 userBalance = stablecoin.balanceOf(address(engine));
+        assertEq(userBalance, mintedAmount - burnAmount);
+        vm.stopPrank();
+    }
 }
